@@ -36,6 +36,7 @@ int highestFireAverage = 0;
 
 void setup() {
   Serial.begin(9600);
+  
   pinMode(D7, OUTPUT);
   
   pinMode(redPin, OUTPUT);
@@ -49,7 +50,6 @@ void setup() {
   Time.zone(+1);
   
   Wire.begin();
-  Serial.println("Initializing I2C devices...");
   accelgyro.initialize();
   
   // Put the variables on le interwebz
@@ -65,7 +65,18 @@ void setup() {
 
 void loop() {
     
-  haveSensorDataChanged();    
+  haveSensorDataChanged();
+  
+  char buffer[50];
+  
+  int j = snprintf(buffer, sizeof(buffer), "{\"currTemp\": %f, \"highestTemp\": %f}", tempValue, highestTempValue);
+  
+  //String s = snprintf(buffer, sizeof(buffer), "{\"currTemp\": %f, \"highestTemp\": %f}", tempValue, highestTempValue);
+  
+  Serial.println(buffer);
+  
+  //String s = Serial.printf("{\"currTemp\": %f, \"highestTemp\": %f}", buffer);
+  //Serial.println(buffer);
  
   digitalWrite(D7, HIGH);
   delay(2000);
@@ -137,13 +148,11 @@ bool hasMotionSensorChanged(){
     return true;  
   }
   
-  if (accelgyro.getAccelerationX() >= 500 || accelgyro.getAccelerationX() <= -500) {
-      Serial.println(accelgyro.getAccelerationX());
+  if (accelgyro.getAccelerationX() >= 550 || accelgyro.getAccelerationX() <= -550) {
     return true;
   }
   
-  if (accelgyro.getAccelerationY() >= 500 || accelgyro.getAccelerationY() <= -500) {
-      Serial.println(accelgyro.getAccelerationY());
+  if (accelgyro.getAccelerationY() >= 550 || accelgyro.getAccelerationY() <= -550) {
     return true;
   }
   // We only care about motions that actually could make the plant fall.
