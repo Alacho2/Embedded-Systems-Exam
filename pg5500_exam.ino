@@ -8,11 +8,14 @@
 
 // EXPOSED VARIABLES
 int lightValue = 0;
-double tempValue = 0.0;
 int fireAverage = 0;
 int waterLevel = 0;
 int highestLightValue = 0;
-int highestTempValue = 0;
+double tempValue = 0.0;
+double highestTempValue = 0;
+
+int waterLevelArr[3] = {0, 0, 0};
+int waterReadIndex = 0;
 
 // MPU values
 MPU6050 accelgyro;
@@ -22,7 +25,7 @@ int16_t gx, gy, gz;
 // RGB LED
 int redPin = D2;
 int greenPin = D3;
-int bluePin = D4;
+int bluePin = D5;
 
 // Vars for fireValues.
 const int numFireReadings = 10;
@@ -41,6 +44,7 @@ void setup() {
   for (int i = 0; i < numFireReadings; i++) {
     fireReadings[i] = 0;
   }
+  
   Time.zone(+1);
   
   Wire.begin();
@@ -52,19 +56,25 @@ void setup() {
   Particle.variable("temp", &tempValue, DOUBLE);
   Particle.variable("fireLevel", &fireAverage, INT);
   Particle.variable("waterLevel", &waterLevel, INT);
+  
+  analogWrite(bluePin, 0);  
+  analogWrite(redPin, 0);
+  analogWrite(greenPin, 0);
 }
 
 void loop() {
+    
+  haveSensorDataChanged();    
 
-  updateLightValue();
-  updateTemperature();
+  //updateLightValue();
+  // updateTemperature();
  
   digitalWrite(D7, HIGH);
   delay(2000);
   digitalWrite(D7, LOW);
   updateFireReadings();
   resetTotalReadings();
-  updateWaterValue();
+  // updateWaterValue();
   
   /*
   accelgyro.getRotation(&gx, &gy, &gz);
@@ -73,30 +83,62 @@ void loop() {
   Serial.println(accelgyro.getRotationZ());
   Serial.println("Hei"); */
   
-  accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  /* accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
   Serial.print("a/g:\t");
   Serial.print(ax); Serial.print("\t");
   Serial.print(ay); Serial.print("\t");
   Serial.print(az); Serial.print("\t");
   Serial.print(gx); Serial.print("\t");
   Serial.print(gy); Serial.print("\t");
-  Serial.println(gz);
+  Serial.println(gz); */
 }
 
-void updateHighestValues() {
-  if (lightValue > highestLightValue) {
-    // lightValue = analogRead(LIGHTSENSOR);
-    highestLightValue = lightValue;
-    // Add what time it is.
+bool haveSensorDataChanged() {
+  updateLightValue();
+  updateTemperature();
+  
+  const int todaysBestLight = highestLightValue;
+  const double todaysHighestTemp = highestTempValue;
+  
+  if (updateWaterReadings()) {
+    updateRGBLed(bluePin, 255);  
+    return true;
   }
   
-  if (tempValue > highestLightValue) {
-    highestTempValue = tempValue;
-    // Add what time it is.
+  if (lightValue > todaysBestLight+5) {
+    highestLightValue = lightValue;
+    updateRGBLed(redPin, 255);
+    updateRGBLed(greenPin, 255);
+    return true;
   }
+  
+  if (tempValue > todaysHighestTemp+1) {
+    highestTempValue = tempValue;
+    updateRGBLed(redPin, 255);
+    updateRGBLed(greenPin, 0);
+    updateRGBLed(bluePin, 0);
+    return true;  
+  }
+  
+  // Fire: rgb(255,127,80)
+  
+  Serial.println("No change");
+  // If everything fails, then not data has changed
+  // And we don't wanna update the string
+  return false;
 }
 
-void updateLightValue() {
+void updateRGBLed(int pin, int intensity){
+  analogWrite(pin, intensity);
+}
+
+// we'll always construct the same object, based on the same values.
+// JS will fetch the same point
+// Jeg er mer interessert i når på dagen den fikk mye lys, og hvor mye det var
+// Været kommer ikke til å endre seg så fort.
+// Blue pin funker ikke på lyset.
+
+int updateLightValue() {
   lightValue = analogRead(LIGHTSENSOR);
 }
 
@@ -105,9 +147,13 @@ void updateWaterValue() {
   //Serial.println(waterLevel);
 }
 
+int getCurrentWaterValue() {
+  return analogRead(WATERSENSOR);
+}
+
 
 void resetTotalReadings() {
-  if (Time.hour() == 0 && Time.isAM()) {
+  if (Time.hour() == 0 && Time.isAM() && Time.second() >= 0) {
     highestTempValue = 0;
     highestLightValue = 0;
     fireTotal = 0;
@@ -122,7 +168,19 @@ void resetTotalReadings() {
 
 void updateTemperature() {
   // float temperatureC = (4.9 * sensorValue * 100.0) / 1024.0;
-  tempValue = (analogRead(TEMPSENSOR) * 100.0) / 1024.0 - 5;
+  tempValue = (analogRead(TEMPSENSOR) * 100.0) / 1024.0 - 8;
+}
+
+bool updateWaterReadings() {
+  const int currentWater = getCurrentWaterValue() / 100; // Water level in mm
+  
+  if (currentWater > waterLevel) {
+    waterLevel = currentWater;
+    return true;
+  }
+  
+  Serial.println(currentWater);
+  return false;
 }
 
 void updateFireReadings() {
@@ -141,3 +199,29 @@ void updateFireReadings() {
   //Serial.println(fireAverage);
   delay(1);
 }
+
+
+/*
+
+void setup() {
+    
+}
+
+void loop() {
+    // read raw accel/gyro measurements from device
+    accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    Serial.print("a/g:\t");
+    Serial.print(ax); Serial.print("\t");
+    Serial.print(ay); Serial.print("\t");
+    Serial.print(az); Serial.print("\t");
+    Serial.print(gx); Serial.print("\t");
+    Serial.print(gy); Serial.print("\t");
+    Serial.println(gz);
+    Serial.println(accelgyro.getDeviceID())
+    delay(2000);
+    
+    toggleLed();
+    
+}
+
+*/
