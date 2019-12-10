@@ -13,6 +13,10 @@ int waterLevel = 0;
 int highestLightValue = 0;
 double tempValue = 0.0;
 double highestTempValue = 0;
+int brightestHourOfDay = 0;
+int brightestMinuteOfDay = 0; 
+
+char buffer[621];
 
 int waterLevelArr[3] = {0, 0, 0};
 int waterReadIndex = 0;
@@ -53,10 +57,11 @@ void setup() {
   accelgyro.initialize();
   
   // Put the variables on le interwebz
-  Particle.variable("lightLevel", &lightValue, INT);
-  Particle.variable("temp", &tempValue, DOUBLE);
-  Particle.variable("fireLevel", &fireAverage, INT);
-  Particle.variable("waterLevel", &waterLevel, INT);
+  // Particle.variable("lightLevel", &lightValue, INT);
+  // Particle.variable("temp", &tempValue, DOUBLE);
+  Particle.variable("jsonData", buffer);
+  // Particle.variable("fireLevel", &fireAverage, INT);
+  // Particle.variable("waterLevel", &waterLevel, INT);
   
   analogWrite(bluePin, 0);  
   analogWrite(redPin, 0);
@@ -67,16 +72,13 @@ void loop() {
     
   haveSensorDataChanged();
   
-  char buffer[50];
+  // Let's construct data into json, so it's easier to handle on the dashboard.
+  int j = snprintf(buffer, sizeof(buffer), "{ 'currTemp': %f, 'highestTemp': %f,", tempValue, highestTempValue);
+  j += snprintf(buffer+j, sizeof(buffer), "'fireLevel': %d,", fireAverage);
+  j += snprintf(buffer+j, sizeof(buffer), "'waterLevel': %d,", waterLevel);
+  j += snprintf(buffer+j, sizeof(buffer), "'lightLevel': %d, 'atHour': %d%d }", lightValue, brightestHourOfDay, brightestMinuteOfDay);
   
-  int j = snprintf(buffer, sizeof(buffer), "{\"currTemp\": %f, \"highestTemp\": %f}", tempValue, highestTempValue);
-  
-  //String s = snprintf(buffer, sizeof(buffer), "{\"currTemp\": %f, \"highestTemp\": %f}", tempValue, highestTempValue);
-  
-  Serial.println(buffer);
-  
-  //String s = Serial.printf("{\"currTemp\": %f, \"highestTemp\": %f}", buffer);
-  //Serial.println(buffer);
+  Serial.println(j);
  
   digitalWrite(D7, HIGH);
   delay(2000);
@@ -94,6 +96,8 @@ bool haveSensorDataChanged() {
   
   if (lightValue > todaysBestLight+5) {
     highestLightValue = lightValue;
+    brightestHourOfDay = Time.hour();
+    brightestMinuteOfDay = Time.minute();
     updateRGBLed(redPin, 255);
     updateRGBLed(greenPin, 255);
     updateRGBLed(bluePin, 0);
@@ -165,6 +169,7 @@ bool hasMotionSensorChanged(){
 // Jeg er mer interessert i når på dagen den fikk mye lys, og hvor mye det var
 // Været kommer ikke til å endre seg så fort.
 // Blue pin funker ikke på lyset.
+// Konstruerer json for å gjøre den sikrere og ha færre entry points.
 
 int updateLightValue() {
   lightValue = analogRead(LIGHTSENSOR);
@@ -198,7 +203,7 @@ void resetTotalReadings() {
 
 void updateTemperature() {
   // float temperatureC = (4.9 * sensorValue * 100.0) / 1024.0;
-  tempValue = (analogRead(TEMPSENSOR) * 100.0) / 1024.0 - 8;
+  tempValue = (analogRead(TEMPSENSOR) * 100.0) / 1024.0 - 10;
 }
 
 bool updateWaterReadings() {
