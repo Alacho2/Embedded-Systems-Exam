@@ -32,6 +32,7 @@ const int numFireReadings = 10;
 int fireReadings[numFireReadings];
 int fireReadIndex = 0;
 int fireTotal = 0;
+int highestFireAverage = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -65,50 +66,26 @@ void setup() {
 void loop() {
     
   haveSensorDataChanged();    
-
-  //updateLightValue();
-  // updateTemperature();
  
   digitalWrite(D7, HIGH);
   delay(2000);
   digitalWrite(D7, LOW);
-  updateFireReadings();
   resetTotalReadings();
-  // updateWaterValue();
-  
-  /*
-  accelgyro.getRotation(&gx, &gy, &gz);
-  Serial.println(accelgyro.getRotationX());
-  Serial.println(accelgyro.getRotationY());
-  Serial.println(accelgyro.getRotationZ());
-  Serial.println("Hei"); */
-  
-  /* accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-  Serial.print("a/g:\t");
-  Serial.print(ax); Serial.print("\t");
-  Serial.print(ay); Serial.print("\t");
-  Serial.print(az); Serial.print("\t");
-  Serial.print(gx); Serial.print("\t");
-  Serial.print(gy); Serial.print("\t");
-  Serial.println(gz); */
 }
 
 bool haveSensorDataChanged() {
   updateLightValue();
   updateTemperature();
+  updateFireReadings();
   
   const int todaysBestLight = highestLightValue;
   const double todaysHighestTemp = highestTempValue;
-  
-  if (updateWaterReadings()) {
-    updateRGBLed(bluePin, 255);  
-    return true;
-  }
   
   if (lightValue > todaysBestLight+5) {
     highestLightValue = lightValue;
     updateRGBLed(redPin, 255);
     updateRGBLed(greenPin, 255);
+    updateRGBLed(bluePin, 0);
     return true;
   }
   
@@ -120,16 +97,58 @@ bool haveSensorDataChanged() {
     return true;  
   }
   
-  // Fire: rgb(255,127,80)
+  if (fireAverage >= 30) {
+    updateRGBLed(redPin, 255);
+    updateRGBLed(greenPin, 127);
+    updateRGBLed(bluePin, 80);
+    return true;
+  }
   
-  Serial.println("No change");
+  if (hasMotionSensorChanged()) {
+    updateRGBLed(redPin, 0);
+    updateRGBLed(greenPin, 255);
+    updateRGBLed(bluePin, 0);
+    return true;  
+  }
+  
+  if (updateWaterReadings()) {
+    updateRGBLed(bluePin, 255); 
+    updateRGBLed(redPin, 0);
+    updateRGBLed(greenPin, 0);
+    return true;
+  }
+  
   // If everything fails, then not data has changed
   // And we don't wanna update the string
+  Serial.println("No change");
   return false;
 }
 
 void updateRGBLed(int pin, int intensity){
   analogWrite(pin, intensity);
+}
+
+bool hasMotionSensorChanged(){
+  if (accelgyro.getRotationX() >= 250 || accelgyro.getRotationX() <= -250) {
+    return true;  
+  }
+  
+  if (accelgyro.getRotationY() >= 250 || accelgyro.getRotationY() <= -250) {
+    return true;  
+  }
+  
+  if (accelgyro.getAccelerationX() >= 500 || accelgyro.getAccelerationX() <= -500) {
+      Serial.println(accelgyro.getAccelerationX());
+    return true;
+  }
+  
+  if (accelgyro.getAccelerationY() >= 500 || accelgyro.getAccelerationY() <= -500) {
+      Serial.println(accelgyro.getAccelerationY());
+    return true;
+  }
+  // We only care about motions that actually could make the plant fall.
+  // Simple stuff like watering, taking care and so forth should not trigger.
+  return false;
 }
 
 // we'll always construct the same object, based on the same values.
@@ -144,13 +163,15 @@ int updateLightValue() {
 
 void updateWaterValue() {
   waterLevel = analogRead(WATERSENSOR);
-  //Serial.println(waterLevel);
 }
 
 int getCurrentWaterValue() {
   return analogRead(WATERSENSOR);
 }
 
+void updateMotionSensors() {
+  accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+}
 
 void resetTotalReadings() {
   if (Time.hour() == 0 && Time.isAM() && Time.second() >= 0) {
@@ -178,8 +199,6 @@ bool updateWaterReadings() {
     waterLevel = currentWater;
     return true;
   }
-  
-  Serial.println(currentWater);
   return false;
 }
 
@@ -196,32 +215,5 @@ void updateFireReadings() {
 
   fireAverage = fireTotal / numFireReadings;
   
-  //Serial.println(fireAverage);
   delay(1);
 }
-
-
-/*
-
-void setup() {
-    
-}
-
-void loop() {
-    // read raw accel/gyro measurements from device
-    accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-    Serial.print("a/g:\t");
-    Serial.print(ax); Serial.print("\t");
-    Serial.print(ay); Serial.print("\t");
-    Serial.print(az); Serial.print("\t");
-    Serial.print(gx); Serial.print("\t");
-    Serial.print(gy); Serial.print("\t");
-    Serial.println(gz);
-    Serial.println(accelgyro.getDeviceID())
-    delay(2000);
-    
-    toggleLed();
-    
-}
-
-*/
