@@ -56,6 +56,7 @@ void setup() {
   accelgyro.initialize();
   
   Particle.variable("jsonData", buffer);
+  Particle.variable("fireData", fireAverage);
   
   analogWrite(bluePin, 0);  
   analogWrite(redPin, 0);
@@ -193,7 +194,8 @@ void resetTotalReadings() {
 }
 
 void updateTemperature() {
-  tempValue = (4.9 * sensorValue * 100.0) / 1024.0;
+  // float temperatureC = (4.9 * sensorValue * 100.0) / 1024.0;
+  tempValue = (analogRead(TEMPSENSOR) * 100.0) / 1024.0 - 10;
 }
 
 bool updateWaterReadings() {
