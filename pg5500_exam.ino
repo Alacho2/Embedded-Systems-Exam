@@ -64,7 +64,8 @@ void setup() {
 
 void loop() {
     
-  if(haveSensorDataChanged()) {
+  // If sensorDataChanged or every 5th seconds of a minute, we'll construct the JSON object with new info    
+  if(haveSensorDataChanged() || Time.second() % 5 == 0) {
     int j = snprintf(buffer, sizeof(buffer), "{ 'currTemp': %f, 'highestTemp': %f,", tempValue, highestTempValue);
     j += snprintf(buffer+j, sizeof(buffer), "'hourAtTemp': %d%d,", warmestHourOfDay, warmestMinuteOfDay);
     j += snprintf(buffer+j, sizeof(buffer), "'fireLevel': %d,", fireAverage);
