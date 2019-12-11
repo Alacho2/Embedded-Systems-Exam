@@ -26,9 +26,8 @@ class Dashboard extends React.Component {
 
   componentDidMount(){
     // Update the data every 30 second
-    setInterval(() => {this.fetchDataFromParticle()}, 30000);
+    setInterval(() => {this.fetchDataFromParticle()}, 2000);
   }
-
 
   fetchDataFromParticle(){
     console.log("Happening");
@@ -66,6 +65,28 @@ class Dashboard extends React.Component {
     return backgroundColor;
   }
 
+  processLightInfo(level){
+    let retObj = {
+      backgroundColor: "transparent",
+      message: "Not much at all",
+    };
+
+    if (level > 2000) {
+      retObj.backgroundColor = "#fff300";
+      retObj.message = "The plant should be moved";
+    } else if(level > 1500) {
+      retObj.backgroundColor = "#fff663";
+      retObj.message = "Just about perfect";
+    } else if (level > 1000) {
+      retObj.backgroundColor = "#fff6a2";
+      retObj.message = "A little";
+    } else if(level > 500){
+      retObj.backgroundColor = "#fffcde";
+    }
+
+    return retObj
+  }
+
   render() {
     const {
       currTemp,
@@ -79,12 +100,14 @@ class Dashboard extends React.Component {
       highestLightValue
     } = this.state;
 
+    const lightInfo = this.processLightInfo(highestLightValue);
+
     const fireBackground = fireLevel > 30 ? "orange" : "transparent";
 
     return (
       <div className="container" style={{"textAlign": "center"}}>
         <div className="row">
-          <div className="col-md-2">
+          <div className="col-md-3">
             <h5>Temperature: { currTemp.toFixed(2) }</h5>
             <p></p>
             <h6>Highest today: {highestTemp.toFixed(2)}</h6>
@@ -98,15 +121,23 @@ class Dashboard extends React.Component {
           </div>
           <div
             className="col-md-2"
-            style={{backgroundColor: this.processWaterBackgroundColor(waterLevel)}}>
+            style={{
+              backgroundColor: this.processWaterBackgroundColor(waterLevel)}}>
             <h5>Water:</h5>
             <h6>{waterLevel} mm</h6>
           </div>
           <div className="col-md-2">
-
+            <h5>Plant been moved?</h5>
+            <h6>{hasBeenMoved === 1 ? "Yes" : "No"}</h6>
           </div>
-          <div className="col-md-2"></div>
-          <div className="col-md-2"></div>
+          <div
+            className="col-md-3"
+            style={{backgroundColor: lightInfo.backgroundColor}}>
+            <h5>Light level: { lightLevel }</h5>
+            <p>Status<br /> {lightInfo.message}</p>
+            <h6>Highest today: { highestLightValue }</h6>
+            <p>At: { hourAtLight }</p>
+          </div>
 
         </div>
       </div>

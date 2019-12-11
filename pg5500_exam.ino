@@ -12,14 +12,15 @@ int fireAverage = 0;
 int waterLevel = 0;
 int highestLightValue = 0;
 double tempValue = 0.0;
-double highestTempValue = 0;
+double highestTempValue = 0.0;
 int brightestHourOfDay = 0;
 int brightestMinuteOfDay = 0; 
+int warmestMinuteOfDay = 0;
+int warmestHourOfDay = 0;
+bool hasBeenMoved = false;
 
+// Maximum string length of the Particle is 622.
 char buffer[621];
-
-int waterLevelArr[3] = {0, 0, 0};
-int waterReadIndex = 0;
 
 // MPU values
 MPU6050 accelgyro;
@@ -41,8 +42,6 @@ int highestFireAverage = 0;
 void setup() {
   Serial.begin(9600);
   
-  pinMode(D7, OUTPUT);
-  
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
@@ -56,12 +55,7 @@ void setup() {
   Wire.begin();
   accelgyro.initialize();
   
-  // Put the variables on le interwebz
-  // Particle.variable("lightLevel", &lightValue, INT);
-  // Particle.variable("temp", &tempValue, DOUBLE);
   Particle.variable("jsonData", buffer);
-  // Particle.variable("fireLevel", &fireAverage, INT);
-  // Particle.variable("waterLevel", &waterLevel, INT);
   
   analogWrite(bluePin, 0);  
   analogWrite(redPin, 0);
@@ -70,19 +64,17 @@ void setup() {
 
 void loop() {
     
-  haveSensorDataChanged();
+  if(haveSensorDataChanged()) {
+    int j = snprintf(buffer, sizeof(buffer), "{ 'currTemp': %f, 'highestTemp': %f,", tempValue, highestTempValue);
+    j += snprintf(buffer+j, sizeof(buffer), "'hourAtTemp': %d%d,", warmestHourOfDay, warmestMinuteOfDay);
+    j += snprintf(buffer+j, sizeof(buffer), "'fireLevel': %d,", fireAverage);
+    j += snprintf(buffer+j, sizeof(buffer), "'waterLevel': %d,", waterLevel);
+    j += snprintf(buffer+j, sizeof(buffer), "'hasBeenMoved': %d,", hasBeenMoved);
+    j += snprintf(buffer+j, sizeof(buffer), "'lightLevel': %d, 'hourAtLight': %d%d, ", lightValue, brightestHourOfDay, brightestMinuteOfDay);
+    j += snprintf(buffer+j, sizeof(buffer), "'highestLightValue': %d }", highestLightValue); 
+  }
   
-  // Let's construct data into json, so it's easier to handle on the dashboard.
-  int j = snprintf(buffer, sizeof(buffer), "{ 'currTemp': %f, 'highestTemp': %f,", tempValue, highestTempValue);
-  j += snprintf(buffer+j, sizeof(buffer), "'fireLevel': %d,", fireAverage);
-  j += snprintf(buffer+j, sizeof(buffer), "'waterLevel': %d,", waterLevel);
-  j += snprintf(buffer+j, sizeof(buffer), "'lightLevel': %d, 'atHour': %d%d }", lightValue, brightestHourOfDay, brightestMinuteOfDay);
-  
-  Serial.println(j);
- 
-  digitalWrite(D7, HIGH);
-  delay(2000);
-  digitalWrite(D7, LOW);
+  delay(1000);
   resetTotalReadings();
 }
 
@@ -104,14 +96,18 @@ bool haveSensorDataChanged() {
     return true;
   }
   
-  if (tempValue > todaysHighestTemp+1) {
+  if (tempValue > todaysHighestTemp+0.1) {
     highestTempValue = tempValue;
+    warmestHourOfDay = Time.hour();
+    warmestMinuteOfDay = Time.minute();
     updateRGBLed(redPin, 255);
     updateRGBLed(greenPin, 0);
     updateRGBLed(bluePin, 0);
     return true;  
   }
   
+  // We don't really care about doing anything else than updating the user locally, 
+  // The frontend will handle anything specific.
   if (fireAverage >= 30) {
     updateRGBLed(redPin, 255);
     updateRGBLed(greenPin, 127);
@@ -120,6 +116,7 @@ bool haveSensorDataChanged() {
   }
   
   if (hasMotionSensorChanged()) {
+    hasBeenMoved = true;  
     updateRGBLed(redPin, 0);
     updateRGBLed(greenPin, 255);
     updateRGBLed(bluePin, 0);
@@ -127,9 +124,9 @@ bool haveSensorDataChanged() {
   }
   
   if (updateWaterReadings()) {
-    updateRGBLed(bluePin, 255); 
     updateRGBLed(redPin, 0);
     updateRGBLed(greenPin, 0);
+    updateRGBLed(bluePin, 255); 
     return true;
   }
   
@@ -163,13 +160,6 @@ bool hasMotionSensorChanged(){
   // Simple stuff like watering, taking care and so forth should not trigger.
   return false;
 }
-
-// we'll always construct the same object, based on the same values.
-// JS will fetch the same point
-// Jeg er mer interessert i når på dagen den fikk mye lys, og hvor mye det var
-// Været kommer ikke til å endre seg så fort.
-// Blue pin funker ikke på lyset.
-// Konstruerer json for å gjøre den sikrere og ha færre entry points.
 
 int updateLightValue() {
   lightValue = analogRead(LIGHTSENSOR);
