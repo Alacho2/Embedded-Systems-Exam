@@ -91,8 +91,9 @@ potential of using these data. This app is very simple and here we already
 see the cleverness of delivering JSON instead of 9 different variables.
 If this had been the case, we would have had to call the API and rely on 
 X amount of network requests to finish, in order to keep the dashboard updated.
-You can run the dashboard by writing `npm run dev`, but keep in mind that the
-Particle probably won't be online at the time, so my video shows me using it.
+You can run the dashboard by running  `npm install` followed by `npm run dev`, 
+but you need node installed. Keep in mind that the Particle probably won't be online
+at the time, so my video shows me using it.
 
 ![Online dashboard](https://i.imgur.com/9W9ViVY.png)
 
