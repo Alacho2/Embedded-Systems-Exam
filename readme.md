@@ -39,6 +39,11 @@ actual wiring works. Please note that I couldn't find the fire sensor, so I'm
 using a dark LED in order to illustrate it. The rest of it is pretty accurate.
 
 ### About some of the sensors 
+To keep track of the overall situation locally, we change the color of an
+RGB LED connected to the breadboard. The colors depend on the event that is
+happening. Orange for fire, red for temperature, green for movement, blue
+for water, yellow for light.
+
 #### LM35
 To be honest, I don't really care about how much light the plant has gotten,
 during the day. I could have measured this out and figured out the exact 
@@ -106,7 +111,6 @@ I know I'm talking in the video and that makes me "exposed", but that's okay.
 It was important to explain everything of the project, show off the LED locally
 and also show the dashboard being updated with colours as the events were 
 happening.
-
 
 ### Self-grading
 Overall, I think the project has been a great success. I've managed to 
