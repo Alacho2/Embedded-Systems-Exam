@@ -193,8 +193,7 @@ void resetTotalReadings() {
 }
 
 void updateTemperature() {
-  // float temperatureC = (4.9 * sensorValue * 100.0) / 1024.0;
-  tempValue = (analogRead(TEMPSENSOR) * 100.0) / 1024.0 - 10;
+  tempValue = (4.9 * sensorValue * 100.0) / 1024.0;
 }
 
 bool updateWaterReadings() {
